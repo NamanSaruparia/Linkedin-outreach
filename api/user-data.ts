@@ -2,8 +2,12 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { runtimeConfig } from "./config";
 import { getDb, USERS_COLLECTION } from "./lib/mongodb";
 import { getBearerToken, verifyToken } from "./lib/jwt";
-import { handleOptions, json } from "./lib/http";
-import { parseJsonBody } from "./lib/parseBody";
+import { handleOptions, json, withApiGuard } from "./lib/http";
+import {
+  estimateBodyBytes,
+  MAX_BODY_BYTES,
+  parseJsonBody,
+} from "./lib/parseBody";
 import {
   DEFAULT_PROFILE,
   type AppData,
@@ -11,14 +15,6 @@ import {
 } from "./lib/types";
 
 export const config = runtimeConfig;
-
-async function authenticate(
-  req: VercelRequest
-): Promise<{ mobile: string } | null> {
-  const token = getBearerToken(req.headers.authorization);
-  if (!token) return null;
-  return verifyToken(token);
-}
 
 function toAppData(doc: UserDocument): AppData {
   return {
@@ -28,12 +24,27 @@ function toAppData(doc: UserDocument): AppData {
   };
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+async function userDataHandler(req: VercelRequest, res: VercelResponse) {
   if (handleOptions(req, res)) return;
 
-  const auth = await authenticate(req);
+  let auth: { mobile: string } | null = null;
+  try {
+    const token = getBearerToken(req.headers.authorization);
+    if (token) auth = await verifyToken(token);
+  } catch (err) {
+    console.error("Auth error:", err);
+    return json(res, 500, { error: "Authentication error" });
+  }
+
   if (!auth) {
     return json(res, 401, { error: "Unauthorized" });
+  }
+
+  if (req.method === "PUT" && estimateBodyBytes(req) > MAX_BODY_BYTES) {
+    return json(res, 413, {
+      error:
+        "Data too large to save (over 4MB). Export a backup, then re-import a smaller batch.",
+    });
   }
 
   try {
@@ -87,3 +98,5 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
   }
 }
+
+export default withApiGuard(userDataHandler);

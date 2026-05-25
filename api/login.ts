@@ -2,7 +2,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { runtimeConfig } from "./config";
 import { getDb, USERS_COLLECTION } from "./lib/mongodb";
 import { signToken } from "./lib/jwt";
-import { handleOptions, json } from "./lib/http";
+import { handleOptions, json, withApiGuard } from "./lib/http";
 import { parseJsonBody } from "./lib/parseBody";
 import { DEFAULT_PROFILE, type UserDocument } from "./lib/types";
 
@@ -16,8 +16,15 @@ function normalizeMobile(input: string): string | null {
   return null;
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+async function loginHandler(req: VercelRequest, res: VercelResponse) {
   if (handleOptions(req, res)) return;
+
+  if (req.method === "GET") {
+    return json(res, 200, {
+      ok: true,
+      message: "POST JSON { mobile: \"10-digit number\" } to log in",
+    });
+  }
 
   if (req.method !== "POST") {
     return json(res, 405, { error: "Method not allowed" });
@@ -63,3 +70,5 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
   }
 }
+
+export default withApiGuard(loginHandler);

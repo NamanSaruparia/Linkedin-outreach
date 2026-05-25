@@ -4,6 +4,8 @@ const uri = process.env.MONGODB_URI;
 
 declare global {
   // eslint-disable-next-line no-var
+  var _mongoClient: MongoClient | undefined;
+  // eslint-disable-next-line no-var
   var _mongoClientPromise: Promise<MongoClient> | undefined;
 }
 
@@ -13,8 +15,17 @@ export async function getDb(): Promise<Db> {
   }
 
   if (!global._mongoClientPromise) {
-    const client = new MongoClient(uri);
-    global._mongoClientPromise = client.connect();
+    const client = new MongoClient(uri, {
+      maxPoolSize: 10,
+      serverSelectionTimeoutMS: 10000,
+      connectTimeoutMS: 10000,
+    });
+    global._mongoClient = client;
+    global._mongoClientPromise = client.connect().catch((err) => {
+      global._mongoClientPromise = undefined;
+      global._mongoClient = undefined;
+      throw err;
+    });
   }
 
   const client = await global._mongoClientPromise;

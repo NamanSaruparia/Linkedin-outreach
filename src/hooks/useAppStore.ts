@@ -28,6 +28,9 @@ const emptyData = (): AppData => ({
   lastImportedAt: null,
 });
 
+/** Vercel API body limit ~4MB — skip auto-upload of huge local merges */
+const MAX_AUTO_SYNC_BYTES = 3 * 1024 * 1024;
+
 export function useAppStore(
   mobile: string,
   token: string,
@@ -81,9 +84,16 @@ export function useAppStore(
 
           if (shouldMerge) {
             cloud = mergeAppData(cloud, bestLocal);
-            await apiSaveData(token, cloud);
-            if (mobile === PRIMARY_MOBILE) {
-              clearAllLocalSnapshots();
+            const payloadBytes = JSON.stringify(cloud).length;
+            if (payloadBytes <= MAX_AUTO_SYNC_BYTES) {
+              await apiSaveData(token, cloud);
+              if (mobile === PRIMARY_MOBILE) {
+                clearAllLocalSnapshots();
+              }
+            } else if (!cancelled) {
+              setSyncError(
+                `Local data is large (${Math.round(payloadBytes / 1024)} KB). Use Import → "Sync browser to cloud" after login.`
+              );
             }
           }
         }

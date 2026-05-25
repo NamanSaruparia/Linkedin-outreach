@@ -2,8 +2,12 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { runtimeConfig } from "./config";
 import { getDb, USERS_COLLECTION } from "./lib/mongodb";
 import { getBearerToken, verifyToken } from "./lib/jwt";
-import { handleOptions, json } from "./lib/http";
-import { parseJsonBody } from "./lib/parseBody";
+import { handleOptions, json, withApiGuard } from "./lib/http";
+import {
+  estimateBodyBytes,
+  MAX_BODY_BYTES,
+  parseJsonBody,
+} from "./lib/parseBody";
 import {
   DEFAULT_PROFILE,
   type AppData,
@@ -12,17 +16,29 @@ import {
 
 export const config = runtimeConfig;
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+async function syncHandler(req: VercelRequest, res: VercelResponse) {
   if (handleOptions(req, res)) return;
 
   if (req.method !== "POST") {
     return json(res, 405, { error: "Method not allowed" });
   }
 
+  if (estimateBodyBytes(req) > MAX_BODY_BYTES) {
+    return json(res, 413, {
+      error: "Sync payload too large (over 4MB). Try exporting fewer connections.",
+    });
+  }
+
   const token = getBearerToken(req.headers.authorization);
   if (!token) return json(res, 401, { error: "Unauthorized" });
 
-  const auth = await verifyToken(token);
+  let auth: { mobile: string } | null = null;
+  try {
+    auth = await verifyToken(token);
+  } catch (err) {
+    console.error("Sync auth error:", err);
+    return json(res, 500, { error: "Authentication error" });
+  }
   if (!auth) return json(res, 401, { error: "Unauthorized" });
 
   try {
@@ -39,7 +55,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const mergedConnections =
       incoming.connections.length >= (existing?.connections?.length ?? 0)
         ? incoming.connections
-        : existing?.connections ?? [];
+        : (existing?.connections ?? []);
 
     await users.updateOne(
       { mobile: auth.mobile },
@@ -73,3 +89,5 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
   }
 }
+
+export default withApiGuard(syncHandler);

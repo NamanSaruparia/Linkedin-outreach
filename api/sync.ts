@@ -1,14 +1,17 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { getDb, USERS_COLLECTION } from "../lib/mongodb";
-import { getBearerToken, verifyToken } from "../lib/jwt";
-import { handleOptions, json } from "../lib/http";
+import { runtimeConfig } from "./config";
+import { getDb, USERS_COLLECTION } from "./lib/mongodb";
+import { getBearerToken, verifyToken } from "./lib/jwt";
+import { handleOptions, json } from "./lib/http";
+import { parseJsonBody } from "./lib/parseBody";
 import {
   DEFAULT_PROFILE,
   type AppData,
   type UserDocument,
-} from "../lib/types";
+} from "./lib/types";
 
-/** Force-upload full app data from browser (merge connections by id/url) */
+export const config = runtimeConfig;
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (handleOptions(req, res)) return;
 
@@ -23,7 +26,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!auth) return json(res, 401, { error: "Unauthorized" });
 
   try {
-    const incoming = req.body as AppData;
+    const incoming = parseJsonBody<AppData>(req);
     if (!incoming?.connections) {
       return json(res, 400, { error: "Invalid data" });
     }
@@ -38,18 +41,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         ? incoming.connections
         : existing?.connections ?? [];
 
-    const profile = {
-      ...DEFAULT_PROFILE,
-      ...(existing?.profile ?? {}),
-      ...(incoming.profile ?? {}),
-    };
-
     await users.updateOne(
       { mobile: auth.mobile },
       {
         $set: {
           mobile: auth.mobile,
-          profile,
+          profile: {
+            ...DEFAULT_PROFILE,
+            ...(existing?.profile ?? {}),
+            ...(incoming.profile ?? {}),
+          },
           connections: mergedConnections,
           lastImportedAt:
             incoming.lastImportedAt ?? existing?.lastImportedAt ?? null,

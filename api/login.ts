@@ -1,11 +1,13 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { getDb, USERS_COLLECTION } from "../lib/mongodb";
-import { signToken } from "../lib/jwt";
-import { handleOptions, json } from "../lib/http";
-import { parseJsonBody } from "../lib/parseBody";
-import { DEFAULT_PROFILE, type UserDocument } from "../lib/types";
+import { runtimeConfig } from "./config";
+import { getDb, USERS_COLLECTION } from "./lib/mongodb";
+import { signToken } from "./lib/jwt";
+import { handleOptions, json } from "./lib/http";
+import { parseJsonBody } from "./lib/parseBody";
+import { DEFAULT_PROFILE, type UserDocument } from "./lib/types";
 
-/** Any 10-digit number — open access, no whitelist */
+export const config = runtimeConfig;
+
 function normalizeMobile(input: string): string | null {
   const digits = String(input).replace(/\D/g, "");
   if (digits.length === 10) return digits;
@@ -56,8 +58,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
   } catch (err) {
     console.error("Login error:", err);
-    const message =
-      err instanceof Error ? err.message : "Login failed";
-    return json(res, 500, { error: message });
+    return json(res, 500, {
+      error: err instanceof Error ? err.message : "Login failed",
+    });
   }
 }

@@ -68,11 +68,15 @@ export function useAuth() {
       }
       const msg =
         e instanceof Error ? e.message : "Could not connect to server";
-      setLoginError(
-        msg === "Not Found"
-          ? "API routes missing on Vercel — push latest code and redeploy. Test: your-url/api/health"
-          : msg
-      );
+      if (msg === "Not Found") {
+        setLoginError(
+          "API not found. Open YOUR-VERCEL-URL/api/health in browser — if 404, redeploy latest code from GitHub."
+        );
+      } else if (msg.includes("MONGODB_URI") || msg.includes("JWT_SECRET")) {
+        setLoginError(`Server config: ${msg}. Add env vars on Vercel → Redeploy.`);
+      } else {
+        setLoginError(msg);
+      }
       return false;
     } finally {
       setLoggingIn(false);

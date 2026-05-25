@@ -84,8 +84,8 @@ The frontend talks to `/api/*` on the same domain. For local dev with MongoDB:
 
 ```
 Browser (React on Vercel)
-    ↓  /api/auth/login
-    ↓  /api/user/data
+    ↓  /api/login
+    ↓  /api/user-data
 Vercel Serverless Functions (api/)
     ↓
 MongoDB Atlas (database: linkedin_outreach, collection: users)
@@ -102,7 +102,8 @@ Each user is keyed by **mobile number**. One document per user stores profile, c
 | Login fails / 500 error | Check `MONGODB_URI` and `JWT_SECRET` in Vercel env vars |
 | MongoDB connection timeout | Allow `0.0.0.0/0` in Atlas Network Access |
 | Blank page after deploy | Check Vercel build logs; ensure `dist` is output |
-| Data not saving | Open browser DevTools → Network; check `/api/user/data` PUT |
+| Data not saving | Open browser DevTools → Network; check `/api/user-data` PUT |
+| Login "Not Found" | Open `YOUR-URL/api/health` — must show JSON, not 404 |
 
 ---
 

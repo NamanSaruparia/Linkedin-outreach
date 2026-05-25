@@ -1,12 +1,16 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { getDb, USERS_COLLECTION } from "../lib/mongodb";
-import { getBearerToken, verifyToken } from "../lib/jwt";
-import { handleOptions, json } from "../lib/http";
+import { runtimeConfig } from "./config";
+import { getDb, USERS_COLLECTION } from "./lib/mongodb";
+import { getBearerToken, verifyToken } from "./lib/jwt";
+import { handleOptions, json } from "./lib/http";
+import { parseJsonBody } from "./lib/parseBody";
 import {
   DEFAULT_PROFILE,
   type AppData,
   type UserDocument,
-} from "../lib/types";
+} from "./lib/types";
+
+export const config = runtimeConfig;
 
 async function authenticate(
   req: VercelRequest
@@ -49,7 +53,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     if (req.method === "PUT") {
-      const body = req.body as AppData;
+      const body = parseJsonBody<AppData>(req);
       if (!body?.profile) {
         return json(res, 400, { error: "Invalid data" });
       }
@@ -78,7 +82,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return json(res, 405, { error: "Method not allowed" });
   } catch (err) {
     console.error("Data API error:", err);
-    const message = err instanceof Error ? err.message : "Server error";
-    return json(res, 500, { error: message });
+    return json(res, 500, {
+      error: err instanceof Error ? err.message : "Server error",
+    });
   }
 }

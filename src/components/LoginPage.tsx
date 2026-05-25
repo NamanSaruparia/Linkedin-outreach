@@ -123,6 +123,20 @@ export function LoginPage({
           Friend A and Friend B can both use this link with different numbers —
           each gets their own data in the cloud.
         </p>
+        {!import.meta.env.DEV && (
+          <p className="text-center text-xs text-zinc-400 mt-2">
+            API check:{" "}
+            <a
+              href={`${window.location.origin}/api/health`}
+              target="_blank"
+              rel="noreferrer"
+              className="text-[#0a66c2] underline"
+            >
+              {window.location.origin}/api/health
+            </a>
+            {" "}(should show JSON, not 404)
+          </p>
+        )}
       </div>
     </div>
   );

@@ -66,12 +66,12 @@ export function useAuth() {
         setLoggingIn(false);
         return finishLocal();
       }
+      const msg =
+        e instanceof Error ? e.message : "Could not connect to server";
       setLoginError(
-        e instanceof Error
-          ? e.message === "Not Found"
-            ? "API not available. Deploy to Vercel or run: vercel dev"
-            : e.message
-          : "Could not connect to server"
+        msg === "Not Found"
+          ? "API routes missing on Vercel — push latest code and redeploy. Test: your-url/api/health"
+          : msg
       );
       return false;
     } finally {

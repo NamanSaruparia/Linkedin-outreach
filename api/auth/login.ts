@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getDb, USERS_COLLECTION } from "../lib/mongodb";
 import { signToken } from "../lib/jwt";
 import { handleOptions, json } from "../lib/http";
+import { parseJsonBody } from "../lib/parseBody";
 import { DEFAULT_PROFILE, type UserDocument } from "../lib/types";
 
 /** Any 10-digit number — open access, no whitelist */
@@ -21,7 +22,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const body = req.body as { mobile?: string };
+    const body = parseJsonBody<{ mobile?: string }>(req);
     const mobile = normalizeMobile(body?.mobile ?? "");
 
     if (!mobile) {

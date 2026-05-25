@@ -6,8 +6,8 @@ import { TEMPLATE_PLACEHOLDERS } from "../lib/template";
 import { profileCompleteness } from "../lib/storage";
 import { Card, Field, PageHeader, SectionTitle, inputClass, textareaClass } from "./ui";
 
-const SAMPLE_CONNECTION: Connection = {
-  id: "preview",
+const SAMPLE_HR: Connection = {
+  id: "preview-hr",
   firstName: "Priya",
   lastName: "Sharma",
   fullName: "Priya Sharma",
@@ -24,6 +24,40 @@ const SAMPLE_CONNECTION: Connection = {
   customMessage: "",
   raw: {},
 };
+
+const SAMPLE_TECH: Connection = {
+  id: "preview-tech",
+  firstName: "Arjun",
+  lastName: "Mehta",
+  fullName: "Arjun Mehta",
+  url: "https://www.linkedin.com/in/example2",
+  email: "",
+  company: "Google",
+  position: "Senior Software Engineer",
+  connectedOn: "12 May 2026",
+  status: "pending",
+  contactedAt: null,
+  repliedAt: null,
+  updatedAt: null,
+  notes: "",
+  customMessage: "",
+  raw: {},
+};
+
+const STARTER_TEMPLATE = `Hi {firstName},
+
+{hook}
+
+I'm {yourName}. {education}
+
+{why}
+
+I'm looking for {purpose}
+
+{cta}
+
+Best regards,
+{yourName}`;
 
 interface MessageSetupProps {
   profile: UserProfile;
@@ -75,8 +109,12 @@ export function MessageSetup({
   const completeness = profileCompleteness(profile);
   const isTemplate = profile.messageMode === "template";
 
-  const preview = useMemo(
-    () => getMessageMeta(profile, SAMPLE_CONNECTION),
+  const previewHr = useMemo(
+    () => getMessageMeta(profile, SAMPLE_HR),
+    [profile]
+  );
+  const previewTech = useMemo(
+    () => getMessageMeta(profile, SAMPLE_TECH),
     [profile]
   );
 
@@ -141,6 +179,15 @@ export function MessageSetup({
                   title="Your message"
                   hint="Write exactly what you want to send. Use placeholders below — they change per connection."
                 />
+                <div className="flex flex-wrap gap-2 mb-3">
+                  <button
+                    type="button"
+                    onClick={() => onChange({ messageTemplate: STARTER_TEMPLATE })}
+                    className="text-xs px-3 py-1.5 rounded-lg border border-zinc-200 bg-white hover:border-[#0a66c2]/40 text-zinc-700"
+                  >
+                    Use recommended starter
+                  </button>
+                </div>
                 <Field label="Message template">
                   <textarea
                     className={`${textareaClass} min-h-[220px] font-mono text-[13px]`}
@@ -149,7 +196,7 @@ export function MessageSetup({
                     onChange={(e) =>
                       onChange({ messageTemplate: e.target.value })
                     }
-                    placeholder={`Hi {firstName},\n\n{hook}\n\nYour message here...\n\nBest,\n{yourName}`}
+                    placeholder={`Hi {firstName},\n\n{hook}\n\n{why}\n\n{purpose}\n\n{cta}\n\nBest,\n{yourName}`}
                   />
                 </Field>
 
@@ -334,17 +381,26 @@ export function MessageSetup({
                   Preview · {isTemplate ? "My message" : "Auto"}
                 </span>
               </div>
-              <div className="p-5">
-                <p className="text-xs text-zinc-500 mb-3">
-                  {SAMPLE_CONNECTION.fullName} · {SAMPLE_CONNECTION.position} at{" "}
-                  {SAMPLE_CONNECTION.company}
-                </p>
-                <p className="text-[11px] text-[#0a66c2] bg-[#0a66c2]/5 rounded-lg px-2.5 py-1.5 mb-4">
-                  {preview.note}
-                </p>
-                <pre className="text-sm text-zinc-700 whitespace-pre-wrap font-sans leading-relaxed">
-                  {preview.message}
-                </pre>
+              <div className="p-5 space-y-6 max-h-[70vh] overflow-y-auto">
+                {[
+                  { label: "HR example", conn: SAMPLE_HR, meta: previewHr },
+                  { label: "Tech example", conn: SAMPLE_TECH, meta: previewTech },
+                ].map(({ label, conn, meta }) => (
+                  <div key={conn.id}>
+                    <p className="text-xs font-medium text-zinc-700 mb-1">
+                      {label}: {conn.fullName}
+                    </p>
+                    <p className="text-[11px] text-zinc-500 mb-2">
+                      {conn.position} at {conn.company}
+                    </p>
+                    <p className="text-[11px] text-[#0a66c2] bg-[#0a66c2]/5 rounded-lg px-2.5 py-1.5 mb-3">
+                      {meta.note}
+                    </p>
+                    <pre className="text-sm text-zinc-700 whitespace-pre-wrap font-sans leading-relaxed border-t border-zinc-100 pt-3">
+                      {meta.message}
+                    </pre>
+                  </div>
+                ))}
               </div>
             </Card>
 
@@ -365,9 +421,9 @@ export function MessageSetup({
                 </ul>
               ) : (
                 <ul className="text-xs text-zinc-500 space-y-1.5 list-disc list-inside">
-                  <li>HR → hiring & opportunities angle</li>
-                  <li>Leaders → guidance angle</li>
-                  <li>Uses company, role & your goals</li>
+                  <li>Detects HR, recruiters, leaders, tech, consulting, sales, etc.</li>
+                  <li>Uses company, role, tone & your goals</li>
+                  <li>Works offline with npm run dev (saved in browser)</li>
                 </ul>
               )}
             </Card>

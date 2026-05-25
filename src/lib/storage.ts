@@ -1,6 +1,7 @@
 import type { AppData, UserProfile } from "../types";
 import { DEFAULT_PROFILE } from "../types";
 import { userDataKey } from "./auth";
+import { migrateConnections } from "./connectionUtils";
 
 const LEGACY_KEY = "linkedin-outreach-dashboard";
 
@@ -31,7 +32,7 @@ export function loadAppDataLocal(mobile: string): AppData {
     const parsed = JSON.parse(raw) as AppData;
     return {
       profile: migrateProfile(parsed.profile ?? {}),
-      connections: parsed.connections ?? [],
+      connections: migrateConnections(parsed.connections ?? []),
       lastImportedAt: parsed.lastImportedAt ?? null,
     };
   } catch {

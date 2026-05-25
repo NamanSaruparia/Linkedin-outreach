@@ -21,7 +21,12 @@ import {
   sortConnections,
   type SortKey,
 } from "../lib/connectionUtils";
-import { generateMessage, getMessageMeta } from "../lib/messages";
+import {
+  generateMessage,
+  getGeneratedMessage,
+  getMessageMeta,
+  isUsingCustomMessage,
+} from "../lib/messages";
 import { Card, EmptyState, inputClass, textareaClass } from "./ui";
 
 type StatusFilter = OutreachStatus | "all" | "followup";
@@ -270,8 +275,9 @@ export function ConnectionsTable({
       <div className="space-y-2">
         {filtered.map((conn) => {
           const expanded = expandedId === conn.id;
-          const message = generateMessage(profile, conn);
+          const generated = getGeneratedMessage(profile, conn);
           const meta = getMessageMeta(profile, conn);
+          const isCustom = isUsingCustomMessage(conn);
           const followUp = needsFollowUp(conn);
           const lastAction = getLastActionAt(conn);
           const isSelected = selected.has(conn.id);
@@ -401,24 +407,62 @@ export function ConnectionsTable({
                   </div>
 
                   <div>
-                    <label className="text-xs font-medium text-zinc-500 block mb-2">
-                      Personalized message
-                    </label>
+                    <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                      <label className="text-xs font-medium text-zinc-500">
+                        Message for {conn.firstName || "them"}
+                      </label>
+                      <span
+                        className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                          isCustom
+                            ? "bg-violet-100 text-violet-800"
+                            : generated.source === "template"
+                              ? "bg-blue-50 text-blue-700"
+                              : "bg-emerald-50 text-emerald-700"
+                        }`}
+                      >
+                        {isCustom
+                          ? "Custom"
+                          : generated.source === "template"
+                            ? "Your template"
+                            : "Auto-generated"}
+                      </span>
+                    </div>
                     <textarea
-                      value={conn.customMessage || message}
+                      value={isCustom ? conn.customMessage : generated.message}
                       onChange={(e) =>
                         onUpdate(conn.id, { customMessage: e.target.value })
                       }
-                      rows={10}
+                      rows={12}
                       className={textareaClass}
+                      placeholder="Edit to create a custom message for this person only…"
                     />
-                    <button
-                      type="button"
-                      onClick={() => onUpdate(conn.id, { customMessage: "" })}
-                      className="text-xs text-zinc-400 hover:text-[#0a66c2] mt-2 transition-colors"
-                    >
-                      Reset to auto-generated
-                    </button>
+                    <div className="flex flex-wrap items-center gap-2 mt-2">
+                      <span className="text-[11px] text-zinc-400">
+                        {(isCustom ? conn.customMessage : generated.message).length}{" "}
+                        chars
+                      </span>
+                      {isCustom ? (
+                        <button
+                          type="button"
+                          onClick={() => onUpdate(conn.id, { customMessage: "" })}
+                          className="text-xs text-[#0a66c2] hover:underline font-medium"
+                        >
+                          Reset to {generated.source === "template" ? "template" : "auto"}
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            onUpdate(conn.id, {
+                              customMessage: generated.message,
+                            })
+                          }
+                          className="text-xs text-zinc-500 hover:text-[#0a66c2] hover:underline"
+                        >
+                          Pin as custom (edit freely)
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   <div>

@@ -128,9 +128,10 @@ export function Layout({
 
         <main className="flex-1 px-4 sm:px-6 lg:px-8 py-6 lg:py-8 max-w-6xl w-full">
           {localOnly && (
-            <div className="mb-4 text-xs px-3 py-2 rounded-lg bg-amber-50 text-amber-800 border border-amber-100">
-              Local mode — data saved in this browser only. Use your Vercel link for
-              MongoDB cloud sync.
+            <div className="mb-4 text-xs px-3 py-2 rounded-lg bg-amber-50 text-amber-800 border border-amber-100 leading-relaxed">
+              <strong>Local mode</strong> — login, messages, and imports work fully in
+              this browser (no server needed). Data is saved under your mobile number
+              in localStorage. Deployed Vercel link syncs to MongoDB.
             </div>
           )}
           {(saving || syncError) && !localOnly && (

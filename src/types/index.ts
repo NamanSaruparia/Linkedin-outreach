@@ -74,11 +74,13 @@ export const DEFAULT_PROFILE: UserProfile = {
 
 {hook}
 
-I'm {yourName}, and I'm currently exploring opportunities to learn and contribute through live projects and internships.
+I'm {yourName}. {education}
 
-I'd love to hear if you have anything coming up or could point me in the right direction.
+{why}
 
-Thank you for your time!
+I'm looking for {purpose}
+
+{cta}
 
 Best regards,
 {yourName}`,

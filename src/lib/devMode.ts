@@ -5,11 +5,16 @@ export function isLocalMode(token: string): boolean {
   return token === LOCAL_TOKEN;
 }
 
+/** API base URL — production always uses same origin (avoids broken VITE_API_URL on Vercel) */
+export function getApiBase(): string {
+  if (import.meta.env.PROD) return "";
+  return import.meta.env.VITE_API_URL ?? "";
+}
+
 /** Use MongoDB API when VITE_API_URL is set or we're on the deployed site */
 export function useCloudApi(): boolean {
   if (import.meta.env.VITE_USE_LOCAL === "true") return false;
-  if (import.meta.env.VITE_API_URL) return true;
-  if (import.meta.env.DEV) return false;
+  if (import.meta.env.DEV && !import.meta.env.VITE_API_URL) return false;
   return true;
 }
 

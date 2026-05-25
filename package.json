@@ -10,7 +10,9 @@
     "vercel-build": "npm run build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "seed:user": "node scripts/seed-user.mjs"
+    "seed:user": "node scripts/seed-user.mjs",
+    "test:api": "node scripts/test-api.mjs",
+    "test:mongo": "node scripts/test-mongo.mjs"
   },
   "dependencies": {
     "date-fns": "^4.2.1",

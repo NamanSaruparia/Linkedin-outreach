@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { AppData, Connection, OutreachStatus, UserProfile } from "../types";
 import { DEFAULT_PROFILE } from "../types";
-import { apiFetchData, apiForceSync, apiSaveData } from "../lib/api";
+import { ApiError, apiFetchData, apiForceSync, apiSaveData } from "../lib/api";
 import { PRIMARY_MOBILE } from "../lib/config";
 import {
   clearAllLocalSnapshots,
@@ -28,7 +28,11 @@ const emptyData = (): AppData => ({
   lastImportedAt: null,
 });
 
-export function useAppStore(mobile: string, token: string) {
+export function useAppStore(
+  mobile: string,
+  token: string,
+  onUnauthorized?: () => void
+) {
   const [data, setData] = useState<AppData>(emptyData);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -89,6 +93,10 @@ export function useAppStore(mobile: string, token: string) {
         }
       } catch (e) {
         if (!cancelled) {
+          if (e instanceof ApiError && e.status === 401) {
+            onUnauthorized?.();
+            return;
+          }
           setSyncError(
             e instanceof Error ? e.message : "Failed to load from cloud"
           );
@@ -108,7 +116,7 @@ export function useAppStore(mobile: string, token: string) {
     return () => {
       cancelled = true;
     };
-  }, [mobile, token]);
+  }, [mobile, token, onUnauthorized]);
 
   useEffect(() => {
     if (skipSave.current || loading) return;
@@ -125,6 +133,10 @@ export function useAppStore(mobile: string, token: string) {
           await apiSaveData(token, data);
         }
       } catch (e) {
+        if (e instanceof ApiError && e.status === 401) {
+          onUnauthorized?.();
+          return;
+        }
         setSyncError(e instanceof Error ? e.message : "Failed to save");
       } finally {
         setSaving(false);

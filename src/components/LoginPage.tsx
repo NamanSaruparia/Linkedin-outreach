@@ -79,9 +79,12 @@ export function LoginPage({
             </div>
 
             {loginError && (
-              <p className="text-sm text-rose-600 bg-rose-50 border border-rose-100 rounded-xl px-3 py-2">
+              <div
+                role="alert"
+                className="text-sm text-rose-800 bg-rose-50 border-2 border-rose-200 rounded-xl px-4 py-3 font-medium"
+              >
                 {loginError}
-              </p>
+              </div>
             )}
 
             <button

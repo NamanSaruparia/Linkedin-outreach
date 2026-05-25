@@ -1,6 +1,5 @@
 import type { AppData } from "../types";
-
-const API_BASE = import.meta.env.VITE_API_URL ?? "";
+import { getApiBase } from "./devMode";
 
 export class ApiError extends Error {
   status: number;
@@ -16,7 +15,7 @@ async function request<T>(
   path: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const url = `${API_BASE}${path}`;
+  const url = `${getApiBase()}${path}`;
   const res = await fetch(url, {
     ...options,
     headers: {
@@ -25,7 +24,15 @@ async function request<T>(
     },
   });
 
+  const contentType = res.headers.get("content-type") ?? "";
   const body = await res.json().catch(() => ({}));
+
+  if (res.ok && !contentType.includes("application/json")) {
+    throw new ApiError(
+      "Server returned HTML instead of JSON — API route may be missing. Redeploy latest code.",
+      res.status
+    );
+  }
 
   if (!res.ok) {
     const errMsg =

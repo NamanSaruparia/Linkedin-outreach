@@ -35,7 +35,7 @@ function AuthenticatedApp({
   localOnly?: boolean;
 }) {
   const [tab, setTab] = useState<Tab>("setup");
-  const store = useAppStore(mobile, token);
+  const store = useAppStore(mobile, token, onLogout);
 
   const setupComplete = useMemo(
     () => profileCompleteness(store.data.profile),

@@ -52,6 +52,12 @@ export function useAuth() {
 
     try {
       const result = await apiLogin(normalized);
+      if (!result?.token || !result?.mobile) {
+        setLoginError(
+          "Login response was invalid (no token). Open /api/health — if OK, redeploy and hard-refresh (Ctrl+Shift+R)."
+        );
+        return false;
+      }
       registerUser(normalized);
       setSession(result.mobile, result.token);
       setSessionState({
@@ -74,6 +80,15 @@ export function useAuth() {
         );
       } else if (msg.includes("MONGODB_URI") || msg.includes("JWT_SECRET")) {
         setLoginError(`Server config: ${msg}. Add env vars on Vercel → Redeploy.`);
+      } else if (
+        msg.toLowerCase().includes("authentication") ||
+        msg.toLowerCase().includes("bad auth") ||
+        (msg.toLowerCase().includes("invalid") &&
+          msg.toLowerCase().includes("password"))
+      ) {
+        setLoginError(
+          `Database connection failed: ${msg}. Fix MONGODB_URI on Vercel (URL-encode @ in password) → Redeploy.`
+        );
       } else {
         setLoginError(msg);
       }

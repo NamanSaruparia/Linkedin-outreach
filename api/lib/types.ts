@@ -27,6 +27,7 @@ export interface Connection {
   status: string;
   contactedAt: string | null;
   repliedAt: string | null;
+  updatedAt?: string | null;
   notes: string;
   customMessage: string;
   raw: Record<string, string>;

@@ -35,6 +35,9 @@ function AuthenticatedApp({
   localOnly?: boolean;
 }) {
   const [tab, setTab] = useState<Tab>("setup");
+  const [connectionsFilter, setConnectionsFilter] = useState<
+    "all" | "followup" | null
+  >(null);
   const store = useAppStore(mobile, token, onLogout);
 
   const setupComplete = useMemo(
@@ -58,7 +61,14 @@ function AuthenticatedApp({
       localOnly={localOnly}
     >
       {tab === "dashboard" && (
-        <Dashboard data={store.data} stats={store.stats} />
+        <Dashboard
+          data={store.data}
+          stats={store.stats}
+          onGoToConnections={() => {
+            setConnectionsFilter("followup");
+            setTab("connections");
+          }}
+        />
       )}
       {tab === "connections" && (
         <>
@@ -71,6 +81,8 @@ function AuthenticatedApp({
             profile={store.data.profile}
             onUpdate={store.updateConnection}
             onSetStatus={store.setStatus}
+            onSetBulkStatus={store.setBulkStatus}
+            filterPreset={connectionsFilter}
           />
         </>
       )}

@@ -19,6 +19,7 @@ const SAMPLE_CONNECTION: Connection = {
   status: "pending",
   contactedAt: null,
   repliedAt: null,
+  updatedAt: null,
   notes: "",
   customMessage: "",
   raw: {},

@@ -43,6 +43,8 @@ export interface Connection {
   status: OutreachStatus;
   contactedAt: string | null;
   repliedAt: string | null;
+  /** Last status/notes/message change (for sorting & dashboard) */
+  updatedAt: string | null;
   notes: string;
   customMessage: string;
   raw: Record<string, string>;

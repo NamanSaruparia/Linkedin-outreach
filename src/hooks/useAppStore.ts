@@ -15,6 +15,12 @@ import {
   parseConnectionsFile,
 } from "../lib/parser";
 import { clearCustomMessages } from "../lib/messages";
+import {
+  migrateConnections,
+  needsFollowUp,
+  nowIso,
+  touchUpdates,
+} from "../lib/connectionUtils";
 import { isLocalMode } from "../lib/devMode";
 import {
   exportDataBackup,
@@ -65,11 +71,20 @@ export function useAppStore(
             saveAppDataLocal(mobile, local);
             if (mobile === PRIMARY_MOBILE) clearAllLocalSnapshots();
           }
-          if (!cancelled) setData(local);
+          if (!cancelled) {
+            setData({
+              ...local,
+              connections: migrateConnections(local.connections),
+            });
+          }
           return;
         }
 
         let cloud = await apiFetchData(token);
+        cloud = {
+          ...cloud,
+          connections: migrateConnections(cloud.connections),
+        };
 
         const ownLocal = getLocalSnapshotForMobile(mobile);
         const bestLocal =
@@ -172,6 +187,7 @@ export function useAppStore(
       contacted + replied + noResponse > 0
         ? Math.round((replied / (contacted + replied + noResponse)) * 100)
         : 0;
+    const followUpCount = data.connections.filter(needsFollowUp).length;
 
     return {
       total,
@@ -182,6 +198,7 @@ export function useAppStore(
       notInterested,
       outreachDone,
       responseRate,
+      followUpCount,
     };
   }, [data.connections]);
 
@@ -215,33 +232,54 @@ export function useAppStore(
       setData((d) => ({
         ...d,
         connections: d.connections.map((c) =>
-          c.id === id ? { ...c, ...updates } : c
+          c.id === id ? { ...c, ...touchUpdates(updates) } : c
         ),
       }));
     },
     []
   );
 
-  const setStatus = useCallback(
-    (id: string, status: OutreachStatus) => {
-      const now = new Date().toISOString();
-      setData((d) => ({
-        ...d,
-        connections: d.connections.map((c) => {
-          if (c.id !== id) return c;
-          const updates: Partial<Connection> = { status };
-          if (status === "contacted" && !c.contactedAt) {
-            updates.contactedAt = now;
-          }
-          if (status === "replied" && !c.repliedAt) {
-            updates.repliedAt = now;
-            if (!c.contactedAt) updates.contactedAt = now;
-          }
-          return { ...c, ...updates };
-        }),
-      }));
+  const applyStatus = useCallback(
+    (c: Connection, status: OutreachStatus, now: string): Connection => {
+      const updates: Partial<Connection> = { status, updatedAt: now };
+      if (status === "contacted" && !c.contactedAt) {
+        updates.contactedAt = now;
+      }
+      if (status === "replied" && !c.repliedAt) {
+        updates.repliedAt = now;
+        if (!c.contactedAt) updates.contactedAt = now;
+      }
+      return { ...c, ...updates };
     },
     []
+  );
+
+  const setStatus = useCallback(
+    (id: string, status: OutreachStatus) => {
+      const now = nowIso();
+      setData((d) => ({
+        ...d,
+        connections: d.connections.map((c) =>
+          c.id === id ? applyStatus(c, status, now) : c
+        ),
+      }));
+    },
+    [applyStatus]
+  );
+
+  const setBulkStatus = useCallback(
+    (ids: string[], status: OutreachStatus) => {
+      if (ids.length === 0) return;
+      const idSet = new Set(ids);
+      const now = nowIso();
+      setData((d) => ({
+        ...d,
+        connections: d.connections.map((c) =>
+          idSet.has(c.id) ? applyStatus(c, status, now) : c
+        ),
+      }));
+    },
+    [applyStatus]
   );
 
   const clearAll = useCallback(() => {
@@ -298,6 +336,7 @@ export function useAppStore(
     importFile,
     updateConnection,
     setStatus,
+    setBulkStatus,
     clearAll,
     backup,
     regeneratePendingMessages,

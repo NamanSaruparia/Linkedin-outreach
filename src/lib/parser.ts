@@ -148,6 +148,7 @@ function rowToConnection(
     status: "pending",
     contactedAt: null,
     repliedAt: null,
+    updatedAt: null,
     notes: "",
     customMessage: "",
     raw,
@@ -260,6 +261,7 @@ function mergeWithPrevious(inc: Connection, prev: Connection): Connection {
     status: prev.status,
     contactedAt: prev.contactedAt,
     repliedAt: prev.repliedAt,
+    updatedAt: prev.updatedAt,
     notes: prev.notes,
     customMessage: prev.customMessage,
   };

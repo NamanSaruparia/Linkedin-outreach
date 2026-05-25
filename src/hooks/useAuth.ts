@@ -9,11 +9,19 @@ import {
   registerUser,
   setSession,
 } from "../lib/auth";
+import {
+  isApiUnreachableError,
+  LOCAL_TOKEN,
+  useCloudApi,
+} from "../lib/devMode";
 
 export function useAuth() {
   const [session, setSessionState] = useState(getSession);
   const [loginError, setLoginError] = useState<string | null>(null);
   const [loggingIn, setLoggingIn] = useState(false);
+  const [localOnly, setLocalOnly] = useState(
+    () => getSession()?.token === LOCAL_TOKEN
+  );
 
   const login = useCallback(async (input: string) => {
     setLoginError(null);
@@ -24,6 +32,24 @@ export function useAuth() {
     }
 
     setLoggingIn(true);
+
+    const finishLocal = () => {
+      registerUser(normalized);
+      setSession(normalized, LOCAL_TOKEN);
+      setSessionState({
+        mobile: normalized,
+        token: LOCAL_TOKEN,
+        loggedInAt: new Date().toISOString(),
+      });
+      setLocalOnly(true);
+      return true;
+    };
+
+    if (!useCloudApi()) {
+      setLoggingIn(false);
+      return finishLocal();
+    }
+
     try {
       const result = await apiLogin(normalized);
       registerUser(normalized);
@@ -33,10 +59,19 @@ export function useAuth() {
         token: result.token,
         loggedInAt: new Date().toISOString(),
       });
+      setLocalOnly(false);
       return true;
     } catch (e) {
+      if (import.meta.env.DEV && isApiUnreachableError(e)) {
+        setLoggingIn(false);
+        return finishLocal();
+      }
       setLoginError(
-        e instanceof Error ? e.message : "Could not connect to server"
+        e instanceof Error
+          ? e.message === "Not Found"
+            ? "API not available. Deploy to Vercel or run: vercel dev"
+            : e.message
+          : "Could not connect to server"
       );
       return false;
     } finally {
@@ -48,6 +83,7 @@ export function useAuth() {
     clearSession();
     setSessionState(null);
     setLoginError(null);
+    setLocalOnly(false);
   }, []);
 
   const mobile = session?.mobile ?? null;
@@ -61,6 +97,7 @@ export function useAuth() {
     logout,
     loginError,
     loggingIn,
+    localOnly,
     recentUsers: getRegisteredUsers(),
     displayMobile: mobile ? formatMobileDisplay(mobile) : "",
   };

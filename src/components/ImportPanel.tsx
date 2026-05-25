@@ -5,6 +5,7 @@ import {
   collectAllLocalSnapshots,
   getBestLocalSnapshot,
 } from "../lib/localMigration";
+import type { ImportMergeResult } from "../lib/parser";
 import { Card, PageHeader } from "./ui";
 
 interface ImportPanelProps {
@@ -17,6 +18,7 @@ interface ImportPanelProps {
   onClear: () => void;
   mobile?: string;
   onSyncBrowser?: () => Promise<void>;
+  lastImportSummary?: ImportMergeResult | null;
 }
 
 export function ImportPanel({
@@ -29,6 +31,7 @@ export function ImportPanel({
   onClear,
   mobile,
   onSyncBrowser,
+  lastImportSummary,
 }: ImportPanelProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [syncing, setSyncing] = useState(false);
@@ -45,7 +48,7 @@ export function ImportPanel({
     <div className="space-y-6 max-w-2xl">
       <PageHeader
         title="Import"
-        description="Upload Connections.csv from LinkedIn. Re-importing keeps your outreach status."
+        description="Upload a new export anytime — existing contacted/replied status is kept; only new connections are added."
       />
 
       <Card
@@ -78,6 +81,31 @@ export function ImportPanel({
           <p className="text-zinc-500 text-sm mt-1">CSV or Excel from LinkedIn export</p>
         </div>
       </Card>
+
+      {lastImportSummary && (
+        <div className="text-sm bg-emerald-50 border border-emerald-100 text-emerald-800 rounded-xl px-4 py-3 space-y-1">
+          <p className="font-medium">Import complete</p>
+          <ul className="text-emerald-700/90 space-y-0.5">
+            <li>
+              <strong>{lastImportSummary.added}</strong> new connection
+              {lastImportSummary.added === 1 ? "" : "s"} added
+            </li>
+            <li>
+              <strong>{lastImportSummary.statusPreserved}</strong> existing — status
+              & notes kept
+            </li>
+            {lastImportSummary.keptNotInFile > 0 && (
+              <li>
+                <strong>{lastImportSummary.keptNotInFile}</strong> kept from before
+                (not in this file)
+              </li>
+            )}
+            <li>
+              <strong>{lastImportSummary.total}</strong> total connections
+            </li>
+          </ul>
+        </div>
+      )}
 
       {error && (
         <div className="flex items-start gap-2 text-rose-700 bg-rose-50 border border-rose-100 rounded-xl px-4 py-3 text-sm">
@@ -149,6 +177,10 @@ export function ImportPanel({
           <li>Get a copy of your data → Connections</li>
           <li>Extract Connections.csv from the ZIP</li>
         </ol>
+        <p className="text-xs text-zinc-400 mt-3">
+          Re-uploading an updated file updates company/role from LinkedIn but keeps
+          your outreach status (contacted, replied, notes, messages).
+        </p>
       </Card>
     </div>
   );

@@ -56,7 +56,7 @@ export function getBestLocalSnapshot(): AppData | null {
 export function mergeAppData(cloud: AppData, local: AppData): AppData {
   return {
     profile: { ...DEFAULT_PROFILE, ...cloud.profile, ...local.profile },
-    connections: mergeConnections(cloud.connections, local.connections),
+    connections: mergeConnections(cloud.connections, local.connections).connections,
     lastImportedAt: cloud.lastImportedAt ?? local.lastImportedAt,
   };
 }

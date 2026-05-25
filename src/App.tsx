@@ -26,11 +26,13 @@ function AuthenticatedApp({
   token,
   displayMobile,
   onLogout,
+  localOnly,
 }: {
   mobile: string;
   token: string;
   displayMobile: string;
   onLogout: () => void;
+  localOnly?: boolean;
 }) {
   const [tab, setTab] = useState<Tab>("setup");
   const store = useAppStore(mobile, token);
@@ -53,6 +55,7 @@ function AuthenticatedApp({
       onLogout={onLogout}
       saving={store.saving}
       syncError={store.syncError}
+      localOnly={localOnly}
     >
       {tab === "dashboard" && (
         <Dashboard data={store.data} stats={store.stats} />
@@ -82,6 +85,7 @@ function AuthenticatedApp({
           onClear={store.clearAll}
           mobile={mobile}
           onSyncBrowser={store.syncBrowserToCloud}
+          lastImportSummary={store.lastImportSummary}
         />
       )}
       {tab === "setup" && (
@@ -116,6 +120,7 @@ function App() {
       token={auth.token}
       displayMobile={auth.displayMobile}
       onLogout={auth.logout}
+      localOnly={auth.localOnly}
     />
   );
 }

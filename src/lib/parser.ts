@@ -229,29 +229,95 @@ export function parseConnectionsFile(file: File): Promise<Connection[]> {
   });
 }
 
+function normalizeUrl(url: string): string {
+  return url.trim().toLowerCase().replace(/\/$/, "");
+}
+
+function nameKey(conn: Connection): string {
+  return conn.fullName.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function findExisting(
+  inc: Connection,
+  byId: Map<string, Connection>,
+  byUrl: Map<string, Connection>,
+  byName: Map<string, Connection>
+): Connection | undefined {
+  if (inc.id && byId.has(inc.id)) return byId.get(inc.id);
+  if (inc.url) {
+    const u = normalizeUrl(inc.url);
+    if (byUrl.has(u)) return byUrl.get(u);
+  }
+  const nk = nameKey(inc);
+  if (nk && nk !== "unknown" && byName.has(nk)) return byName.get(nk);
+  return undefined;
+}
+
+function mergeWithPrevious(inc: Connection, prev: Connection): Connection {
+  return {
+    ...inc,
+    id: prev.id,
+    status: prev.status,
+    contactedAt: prev.contactedAt,
+    repliedAt: prev.repliedAt,
+    notes: prev.notes,
+    customMessage: prev.customMessage,
+  };
+}
+
+export interface ImportMergeResult {
+  connections: Connection[];
+  added: number;
+  statusPreserved: number;
+  keptNotInFile: number;
+  total: number;
+}
+
+/**
+ * Re-import: match by LinkedIn URL, id, or name.
+ * Existing outreach status/notes/messages stay; new rows are added.
+ * Contacts only in the old list (not in new file) are kept at the end.
+ */
 export function mergeConnections(
   existing: Connection[],
   incoming: Connection[]
-): Connection[] {
+): ImportMergeResult {
   const byId = new Map(existing.map((c) => [c.id, c]));
   const byUrl = new Map(
-    existing.filter((c) => c.url).map((c) => [c.url.toLowerCase(), c])
+    existing
+      .filter((c) => c.url)
+      .map((c) => [normalizeUrl(c.url), c])
+  );
+  const byName = new Map(
+    existing
+      .filter((c) => nameKey(c) && nameKey(c) !== "unknown")
+      .map((c) => [nameKey(c), c])
   );
 
-  return incoming.map((inc) => {
-    const prev =
-      byId.get(inc.id) ??
-      (inc.url ? byUrl.get(inc.url.toLowerCase()) : undefined);
+  const matchedPrevIds = new Set<string>();
+  let added = 0;
+  let statusPreserved = 0;
+
+  const merged = incoming.map((inc) => {
+    const prev = findExisting(inc, byId, byUrl, byName);
     if (prev) {
-      return {
-        ...inc,
-        status: prev.status,
-        contactedAt: prev.contactedAt,
-        repliedAt: prev.repliedAt,
-        notes: prev.notes,
-        customMessage: prev.customMessage,
-      };
+      matchedPrevIds.add(prev.id);
+      statusPreserved++;
+      return mergeWithPrevious(inc, prev);
     }
+    added++;
     return inc;
   });
+
+  const keptNotInFile = existing.filter((c) => !matchedPrevIds.has(c.id));
+
+  const connections = [...merged, ...keptNotInFile];
+
+  return {
+    connections,
+    added,
+    statusPreserved,
+    keptNotInFile: keptNotInFile.length,
+    total: connections.length,
+  };
 }

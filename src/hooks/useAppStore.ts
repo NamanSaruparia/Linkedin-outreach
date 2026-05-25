@@ -9,9 +9,18 @@ import {
   getLocalSnapshotForMobile,
   mergeAppData,
 } from "../lib/localMigration";
-import { mergeConnections, parseConnectionsFile } from "../lib/parser";
+import {
+  type ImportMergeResult,
+  mergeConnections,
+  parseConnectionsFile,
+} from "../lib/parser";
 import { clearCustomMessages } from "../lib/messages";
-import { exportDataBackup } from "../lib/storage";
+import { isLocalMode } from "../lib/devMode";
+import {
+  exportDataBackup,
+  loadAppDataLocal,
+  saveAppDataLocal,
+} from "../lib/storage";
 
 const emptyData = (): AppData => ({
   profile: { ...DEFAULT_PROFILE },
@@ -26,6 +35,8 @@ export function useAppStore(mobile: string, token: string) {
   const [syncError, setSyncError] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastImportSummary, setLastImportSummary] =
+    useState<ImportMergeResult | null>(null);
   const skipSave = useRef(true);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -38,6 +49,19 @@ export function useAppStore(mobile: string, token: string) {
       skipSave.current = true;
 
       try {
+        if (isLocalMode(token)) {
+          let local = loadAppDataLocal(mobile);
+          const bestLocal =
+            mobile === PRIMARY_MOBILE ? getBestLocalSnapshot() : null;
+          if (bestLocal && bestLocal.connections.length > local.connections.length) {
+            local = mergeAppData(local, bestLocal);
+            saveAppDataLocal(mobile, local);
+            if (mobile === PRIMARY_MOBILE) clearAllLocalSnapshots();
+          }
+          if (!cancelled) setData(local);
+          return;
+        }
+
         let cloud = await apiFetchData(token);
 
         const ownLocal = getLocalSnapshotForMobile(mobile);
@@ -95,7 +119,11 @@ export function useAppStore(mobile: string, token: string) {
       setSaving(true);
       setSyncError(null);
       try {
-        await apiSaveData(token, data);
+        if (isLocalMode(token)) {
+          saveAppDataLocal(mobile, data);
+        } else {
+          await apiSaveData(token, data);
+        }
       } catch (e) {
         setSyncError(e instanceof Error ? e.message : "Failed to save");
       } finally {
@@ -144,11 +172,15 @@ export function useAppStore(mobile: string, token: string) {
     setError(null);
     try {
       const parsed = await parseConnectionsFile(file);
-      setData((d) => ({
-        ...d,
-        connections: mergeConnections(d.connections, parsed),
-        lastImportedAt: new Date().toISOString(),
-      }));
+      setData((d) => {
+        const result = mergeConnections(d.connections, parsed);
+        setLastImportSummary(result);
+        return {
+          ...d,
+          connections: result.connections,
+          lastImportedAt: new Date().toISOString(),
+        };
+      });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Import failed");
     } finally {
@@ -248,6 +280,7 @@ export function useAppStore(mobile: string, token: string) {
     backup,
     regeneratePendingMessages,
     syncBrowserToCloud,
+    lastImportSummary,
     setData,
   };
 }

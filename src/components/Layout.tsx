@@ -18,6 +18,7 @@ interface LayoutProps {
   onLogout: () => void;
   saving?: boolean;
   syncError?: string | null;
+  localOnly?: boolean;
 }
 
 const TABS: { id: Tab; label: string; icon: typeof Users }[] = [
@@ -36,6 +37,7 @@ export function Layout({
   onLogout,
   saving = false,
   syncError = null,
+  localOnly = false,
 }: LayoutProps) {
   return (
     <div className="min-h-screen flex">
@@ -125,7 +127,13 @@ export function Layout({
         </header>
 
         <main className="flex-1 px-4 sm:px-6 lg:px-8 py-6 lg:py-8 max-w-6xl w-full">
-          {(saving || syncError) && (
+          {localOnly && (
+            <div className="mb-4 text-xs px-3 py-2 rounded-lg bg-amber-50 text-amber-800 border border-amber-100">
+              Local mode — data saved in this browser only. Use your Vercel link for
+              MongoDB cloud sync.
+            </div>
+          )}
+          {(saving || syncError) && !localOnly && (
             <div
               className={`mb-4 text-xs px-3 py-2 rounded-lg flex items-center justify-between ${
                 syncError

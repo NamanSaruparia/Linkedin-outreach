@@ -25,6 +25,7 @@ export function LoginPage({
   };
 
   const quickLogin = async (m: string) => {
+    setMobile(m);
     await onLogin(m);
   };
 
